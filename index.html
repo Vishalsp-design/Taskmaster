@@ -2,9 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TaskMaster</title>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TaskMaster Pro</title>
+    
+    <link rel="icon" href="https://fav.farm/✅">
+    <link rel="apple-touch-icon" href="https://fav.farm/✅">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#09090b">
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/dist/confetti.browser.min.js"></script>
+    
     <style>
         :root {
             --bg: #09090b;
@@ -15,15 +23,16 @@
         body {
             background-color: var(--bg);
             color: var(--text);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, system-ui, sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
+            padding: 40px 20px;
             margin: 0;
+            min-height: 100vh;
         }
 
-        /* Stats & Progress Section */
+        /* Stats Section */
         .stats-container {
             background: rgba(255, 255, 255, 0.05);
             padding: 15px;
@@ -47,10 +56,10 @@
             height: 100%;
             width: 0%;
             background: linear-gradient(90deg, #4facfe, #00f2fe);
-            transition: width 0.5s ease-in-out;
+            transition: width 0.5s ease;
         }
 
-        /* Input Section */
+        /* Input Styles */
         .input-box {
             display: flex;
             flex-direction: column;
@@ -67,6 +76,7 @@
             background: var(--card);
             color: white;
             font-size: 1rem;
+            outline: none;
         }
 
         #add-btn {
@@ -77,12 +87,9 @@
             border-radius: 10px;
             font-weight: bold;
             cursor: pointer;
-            transition: transform 0.2s;
         }
 
-        #add-btn:active { transform: scale(0.98); }
-
-        /* Task List & Card Design */
+        /* The Task Cards - Back to the "Perfect" Look */
         .task-list {
             width: 100%;
             max-width: 400px;
@@ -92,18 +99,16 @@
 
         .task-card {
             background: var(--card);
-            margin-bottom: 20px; /* Gap between tasks */
-            border-bottom: 2px solid rgba(255, 255, 255, 0.8); /* The White Line separator */
+            margin-bottom: 20px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.8);
             border-radius: 12px;
             display: flex;
             align-items: center;
             position: relative; 
             min-height: 80px; 
             overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         }
 
-        /* Left Color Bar */
         .priority-bar {
             position: absolute;
             left: 0;
@@ -113,19 +118,14 @@
             z-index: 2;
         }
 
-        /* Centered Task Text */
         .task-info { 
             width: 100%;
             text-align: center; 
-            padding: 0 60px; /* Space for bar and X */
+            padding: 0 60px;
             font-size: 1.2rem;
             cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
-        /* Right Corner X Button */
         .delete-icon {
             position: absolute;
             right: 15px;
@@ -136,7 +136,6 @@
             font-weight: bold;
             cursor: pointer;
             z-index: 3;
-            padding: 5px;
         }
     </style>
 </head>
@@ -150,7 +149,7 @@
     <div class="input-box">
         <input type="text" id="taskInput" placeholder="What is the next goal?">
         <select id="priorityInput">
-            <option value="1">High Priority (Velvet Red)</option>
+            <option value="1">High Priority (Red)</option>
             <option value="2">Medium Priority (Blue)</option>
             <option value="3">Low Priority (Green)</option>
         </select>
@@ -160,7 +159,6 @@
     <ul id="taskList" class="task-list"></ul>
 
     <script>
-        // Load tasks from LocalStorage
         let tasks = JSON.parse(localStorage.getItem('proTasks')) || [];
 
         function updateUI() {
@@ -168,52 +166,37 @@
             list.innerHTML = '';
             let completedCount = 0;
 
-            // Sort logic: 1 (High) first
             tasks.sort((a, b) => a.priority - b.priority);
 
             tasks.forEach((task, index) => {
                 if(task.completed) completedCount++;
-                
-                // Colors defined by you
                 let pColor = task.priority === 1 ? "#800517" : (task.priority === 2 ? "#4facfe" : "#6b8e23");
 
                 const li = document.createElement('li');
                 li.className = 'task-card';
-                
                 li.innerHTML = `
                     <div class="priority-bar" style="background-color: ${pColor};"></div>
-                    
                     <div class="task-info" onclick="toggleTask(${index})">
                         <span style="${task.completed ? 'text-decoration: line-through; opacity: 0.4' : ''}">
                             ${task.text}
                         </span>
                     </div>
-                    
                     <div class="delete-icon" onclick="deleteTask(${index})">×</div>
                 `;
                 list.appendChild(li);
             });
 
-            // Progress Logic
             const percent = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
             document.getElementById('progress-fill').style.width = percent + "%";
             document.getElementById('progress-text').innerText = `Mission Progress: ${Math.round(percent)}%`;
-
             localStorage.setItem('proTasks', JSON.stringify(tasks));
         }
 
         function addTask() {
             const input = document.getElementById('taskInput');
             const pInput = document.getElementById('priorityInput');
-            
             if (input.value.trim() === '') return;
-
-            tasks.push({ 
-                text: input.value, 
-                completed: false, 
-                priority: parseInt(pInput.value) 
-            });
-
+            tasks.push({ text: input.value, completed: false, priority: parseInt(pInput.value) });
             input.value = '';
             updateUI();
         }
@@ -221,12 +204,7 @@
         function toggleTask(index) {
             tasks[index].completed = !tasks[index].completed;
             if(tasks[index].completed) {
-                confetti({
-                    particleCount: 80,
-                    spread: 70,
-                    origin: { y: 0.8 },
-                    colors: ['#4facfe', '#00f2fe', '#ffffff']
-                });
+                confetti({ particleCount: 80, spread: 70, origin: { y: 0.8 } });
             }
             updateUI();
         }
@@ -236,9 +214,8 @@
             updateUI();
         }
 
-        // Initialize
         updateUI();
     </script>
 </body>
-  </html>
+    </html>
     
