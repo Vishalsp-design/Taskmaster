@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TaskMaster</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg: #09090b;
+            --card: #18181b;
+            --text: #ffffff;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        /* Stats & Progress Section */
+        .stats-container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 15px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #333;
+            border-radius: 5px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        #progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            transition: width 0.5s ease-in-out;
+        }
+
+        /* Input Section */
+        .input-box {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 30px;
+        }
+
+        input, select {
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            background: var(--card);
+            color: white;
+            font-size: 1rem;
+        }
+
+        #add-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #add-btn:active { transform: scale(0.98); }
+
+        /* Task List & Card Design */
+        .task-list {
+            width: 100%;
+            max-width: 400px;
+            padding: 0;
+            list-style: none;
+        }
+
+        .task-card {
+            background: var(--card);
+            margin-bottom: 20px; /* Gap between tasks */
+            border-bottom: 2px solid rgba(255, 255, 255, 0.8); /* The White Line separator */
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            position: relative; 
+            min-height: 80px; 
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Left Color Bar */
+        .priority-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 25px;
+            z-index: 2;
+        }
+
+        /* Centered Task Text */
+        .task-info { 
+            width: 100%;
+            text-align: center; 
+            padding: 0 60px; /* Space for bar and X */
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Right Corner X Button */
+        .delete-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #ef4444;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 3;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stats-container">
+        <div id="progress-text" style="font-weight: bold;">Mission Progress: 0%</div>
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+    </div>
+
+    <div class="input-box">
+        <input type="text" id="taskInput" placeholder="What is the next goal?">
+        <select id="priorityInput">
+            <option value="1">High Priority (Velvet Red)</option>
+            <option value="2">Medium Priority (Blue)</option>
+            <option value="3">Low Priority (Green)</option>
+        </select>
+        <button id="add-btn" onclick="addTask()">Add Task</button>
+    </div>
+
+    <ul id="taskList" class="task-list"></ul>
+
+    <script>
+        // Load tasks from LocalStorage
+        let tasks = JSON.parse(localStorage.getItem('proTasks')) || [];
+
+        function updateUI() {
+            const list = document.getElementById('taskList');
+            list.innerHTML = '';
+            let completedCount = 0;
+
+            // Sort logic: 1 (High) first
+            tasks.sort((a, b) => a.priority - b.priority);
+
+            tasks.forEach((task, index) => {
+                if(task.completed) completedCount++;
+                
+                // Colors defined by you
+                let pColor = task.priority === 1 ? "#800517" : (task.priority === 2 ? "#4facfe" : "#6b8e23");
+
+                const li = document.createElement('li');
+                li.className = 'task-card';
+                
+                li.innerHTML = `
+                    <div class="priority-bar" style="background-color: ${pColor};"></div>
+                    
+                    <div class="task-info" onclick="toggleTask(${index})">
+                        <span style="${task.completed ? 'text-decoration: line-through; opacity: 0.4' : ''}">
+                            ${task.text}
+                        </span>
+                    </div>
+                    
+                    <div class="delete-icon" onclick="deleteTask(${index})">×</div>
+                `;
+                list.appendChild(li);
+            });
+
+            // Progress Logic
+            const percent = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
+            document.getElementById('progress-fill').style.width = percent + "%";
+            document.getElementById('progress-text').innerText = `Mission Progress: ${Math.round(percent)}%`;
+
+            localStorage.setItem('proTasks', JSON.stringify(tasks));
+        }
+
+        function addTask() {
+            const input = document.getElementById('taskInput');
+            const pInput = document.getElementById('priorityInput');
+            
+            if (input.value.trim() === '') return;
+
+            tasks.push({ 
+                text: input.value, 
+                completed: false, 
+                priority: parseInt(pInput.value) 
+            });
+
+            input.value = '';
+            updateUI();
+        }
+
+        function toggleTask(index) {
+            tasks[index].completed = !tasks[index].completed;
+            if(tasks[index].completed) {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.8 },
+                    colors: ['#4facfe', '#00f2fe', '#ffffff']
+                });
+            }
+            updateUI();
+        }
+
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            updateUI();
+        }
+
+        // Initialize
+        updateUI();
+    </script>
+</body>
+  </html>
+    
